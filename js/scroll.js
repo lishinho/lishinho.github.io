@@ -1,164 +1,137 @@
-$(function () {
-  var initTop = 0
-  $('.toc-child').hide()
+(function () {
 
-  // main of scroll
-  $(window).scroll(throttle(function (event) {
-    var currentTop = $(this).scrollTop()
-    if (!isMobile()) {
-      // percentage inspired by hexo-theme-next
-      scrollPercent(currentTop)
-      // head position
-      findHeadPosition(currentTop)
-    }
-    var isUp = scrollDirection(currentTop)
-    if (currentTop > 56) {
-      if (isUp) {
-        $('#page-header').hasClass('visible') ? $('#page-header').removeClass('visible') : console.log()
-      } else {
-        $('#page-header').hasClass('visible') ? console.log() : $('#page-header').addClass('visible')
-      }
-      $('#page-header').addClass('fixed')
-      if ($('#go-up').css('opacity') === '0') {
-        $('#go-up').velocity('stop').velocity({
-          translateX: -30,
-          rotateZ: 360,
-          opacity: 1
-        }, {
-          easing: 'easeOutQuart',
-          duration: 200
-        })
-      }
-    } else {
-      if (currentTop === 0) {
-        $('#page-header').removeClass('fixed').removeClass('visible')
-      }
-      $('#go-up').velocity('stop').velocity({
-        translateX: 0,
-        rotateZ: 180,
-        opacity: 0
-      }, {
-        easing: 'linear',
-        duration: 200
-      })
-    }
-  }, 50, 100))
-
-  // go up smooth scroll
-  $('#go-up').on('click', function () {
-    $('body').velocity('stop').velocity('scroll', {
-      duration: 500,
-      easing: 'easeOutQuart'
-    })
-  })
-
-  // head scroll
-  $('#post-content').find('h1,h2,h3,h4,h5,h6').on('click', function (e) {
-    scrollToHead('#' + $(this).attr('id'))
-  })
-
-  // head scroll
-  $('.toc-link').on('click', function (e) {
-    e.preventDefault()
-    scrollToHead($(this).attr('href'))
-  })
-
-  // find the scroll direction
-  function scrollDirection (currentTop) {
-    var result = currentTop > initTop // true is down & false is up
-    initTop = currentTop
-    return result
-  }
-
-  // scroll to a head(anchor)
-  function scrollToHead (anchor) {
-    $(anchor).velocity('stop').velocity('scroll', {
-      duration: 500,
-      easing: 'easeInOutQuart'
-    })
-  }
-
-  // expand toc-item
-  function expandToc ($item) {
-    if ($item.is(':visible')) {
-      return
-    }
-    $item.velocity('stop').velocity('transition.fadeIn', {
-      duration: 500,
-      easing: 'easeInQuart'
-    })
-  }
-
-  function scrollPercent (currentTop) {
-    var docHeight = $('#content-outer').height()
-    var winHeight = $(window).height()
-    var contentMath = (docHeight > winHeight) ? (docHeight - winHeight) : ($(document).height() - winHeight)
-    var scrollPercent = (currentTop) / (contentMath)
-    var scrollPercentRounded = Math.round(scrollPercent * 100)
-    var percentage = (scrollPercentRounded > 100) ? 100
-      : (scrollPercentRounded <= 0) ? 0
-        : scrollPercentRounded
-    $('.progress-num').text(percentage)
-    $('.sidebar-toc__progress-bar').velocity('stop')
-      .velocity({
-        width: percentage + '%'
-      }, {
-        duration: 100,
-        easing: 'easeInOutQuart'
-      })
-  }
-
-  function updateAnchor (anchor) {
-    if (window.history.replaceState && anchor !== window.location.hash) {
-      window.history.replaceState(undefined, undefined, anchor)
-    }
-  }
-
-  // find head position & add active class
-  // DOM Hierarchy:
-  // ol.toc > (li.toc-item, ...)
-  // li.toc-item > (a.toc-link, ol.toc-child > (li.toc-item, ...))
-  function findHeadPosition (top) {
-    // assume that we are not in the post page if no TOC link be found,
-    // thus no need to update the status
-    if ($('.toc-link').length === 0) {
-      return false
+    /**
+     * @description 监听滚动高度，是否显示返回顶部
+     */
+    function myCustomFn(el) {
+        if (el.mcs.top < -600) {
+            if ($('#return-top').css('opacity') === '0') {
+                $('#return-top').velocity('stop').velocity({opacity: 1}, {
+                    duration: 500,
+                    display: 'block'
+                });
+            }
+        } else {
+            $('#return-top').velocity('stop').velocity({opacity: 0}, {
+                duration: 500,
+                display: 'none'
+            });
+        }
     }
 
-    var list = $('#post-content').find('h1,h2,h3,h4,h5,h6')
-    var currentId = ''
-    list.each(function () {
-      var head = $(this)
-      if (top > head.offset().top - 25) {
-        currentId = '#' + $(this).attr('id')
-      }
-    })
-
-    if (currentId === '') {
-      $('.toc-link').removeClass('active')
-      $('.toc-child').hide()
+    /**
+     * @description 阅读进度
+     * @param el
+     */
+    function readPercent(el) {
+        // console.log(el.mcs.content[0].offsetHeight);
+        let percent = Math.round(-el.mcs.top / (el.mcs.content[0].offsetHeight - el.offsetHeight) * 100);
+        $('.sidebar-toc-progress .progress-num').text(percent);
+        $('.sidebar-toc-progress-bar').velocity('stop').velocity({width: percent + '%'}, {
+            duration: 100,
+            easing: 'easeInOutQuart'
+        });
     }
 
-    var currentActive = $('.toc-link.active')
-    if (currentId && currentActive.attr('href') !== currentId) {
-      updateAnchor(currentId)
+    /**
+     * @description 滚动到页面顶部
+     */
+    $('#return-top').on('click', function () {
+        $('#content-outer').mCustomScrollbar('scrollTo', 'top', {
+            scrollInertia: 1000,
+            scrollEasing: 'easeInOut'
+        });
+    });
 
-      $('.toc-link').removeClass('active')
-      var _this = $('.toc-link[href="' + currentId + '"]')
-      _this.addClass('active')
+    /**
+     * @description 滚动条修饰 - jquery 插件
+     */
+    $('#content-outer').mCustomScrollbar({
+        theme: 'minimal',
+        axis: 'y', // horizontal scrollbar
+        callbacks: {
+            whileScrolling: function () {
+                myCustomFn(this);
+                readPercent(this);
+                findHeadPosition(this);
+            },
+            onScroll: function () {
 
-      var parents = _this.parents('.toc-child')
-      // Returned list is in reverse order of the DOM elements
-      // Thus `parents.last()` is the outermost .toc-child container
-      // i.e. list of subsections
-      var topLink = (parents.length > 0) ? parents.last() : _this
-      expandToc(topLink.closest('.toc-item').find('.toc-child'))
-      topLink
-        // Find all top-level .toc-item containers, i.e. sections
-        // excluding the currently active one
-        .closest('.toc-item').siblings('.toc-item')
-        // Hide their respective list of subsections
-        .find('.toc-child').hide()
+            }
+        }
+    });
+    $('#sidebar-toc-content').mCustomScrollbar({
+        theme: 'minimal',
+        axis: 'y', // horizontal scrollbar
+        callbacks: {}
+    });
+
+    // $('figure.highlight').mCustomScrollbar({
+    //     theme: 'minimal',
+    //     axis: 'x', // horizontal scrollbar
+    //     mouseWheel: {
+    //         enable: false
+    //     },
+    //     callbacks: {}
+    // });
+
+    /**
+     * @description menu link scroll to content
+     */
+    $('.sidebar-toc-content .toc-link').on('click', function (e) {
+        e.preventDefault();
+        let _id = $(this).attr('href');
+        $('#content-outer').mCustomScrollbar('scrollTo', _id, {
+            scrollInertia: 500
+        });
+    });
+
+    /**
+     * @description 找到当前页面的位置，更改 active 目录
+     * @param el
+     */
+    function findHeadPosition(el) {
+        let currentId = '';
+        const menuHeight = $('#menu-outer').height() + 1;
+        // console.log(el.mcs);
+        let list = $('#post').find('h1,h2,h3,h4,h5,h6');
+        list.each(function () {
+            if ($(this).offset().top <= menuHeight) {
+                currentId = $(this).attr('id');
+            }
+        });
+        $('.sidebar-toc-content .toc-link').removeClass('active');
+        if (currentId === '') {
+            // currentId = list[0].id;
+            return;
+        }
+        let $this = $('.sidebar-toc-content .toc-link[href="#' + currentId + '"]');
+        $this.addClass('active');
+        let parents = $this.parents('.toc-child');
+        if (parents.length > 0) {
+            let child = null;
+            parents.length > 1 ? child = parents.eq(parents.length - 1).find('.toc-child') : child = parents;
+            if (child.length > 0 && child.is(':hidden')) {
+                expandToc(child);
+            }
+            parents.eq(parents.length - 1).closest('.toc-item').siblings('.toc-item').find('.toc-child').hide();
+        } else {
+            if ($this.closest('.toc-item').find('.toc-child').is(':hidden')) {
+                expandToc($this.closest('.toc-item').find('.toc-child'));
+            }
+            $this.closest('.toc-item').siblings('.toc-item').find('.toc-child').hide();
+        }
     }
-  }
-})
+
+    /**
+     * @description expand toc-item
+     * @param $item
+     */
+    function expandToc($item) {
+        // $item.show();
+        $item.velocity('stop').velocity('fadeIn', {
+            duration: 500,
+            easing: 'easeInQuart'
+        });
+    }
+}());
