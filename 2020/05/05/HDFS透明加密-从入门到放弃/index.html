@@ -1,0 +1,186 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="renderer" content="webkit"><meta name="format-detection" content="telephone=no"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black"><link rel="icon" href="/assets/icon.png?v=2.0.0-rc.0" type="image/png" sizes="16x16"><link rel="icon" href="/assets/icon.png?v=2.0.0-rc.0" type="image/png" sizes="32x32"><meta name="description" content="前言       这篇文章需要一点hadoop框架的基础，你最好需要知道什么是hadoop，以及需要了解hadoop的文件系统hdfs。如果你不了解的话，我会尝试用简单的原理来解释，希望能对你有用，这期内容可能有些烧脑，可以多读几遍，我也有学习不足的地方，欢迎提问。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HDFS透明加密 从入门到放弃">
+<meta property="og:url" content="http://yoursite.com/2020/05/05/HDFS%E9%80%8F%E6%98%8E%E5%8A%A0%E5%AF%86-%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/index.html">
+<meta property="og:site_name" content="Lishinho Website">
+<meta property="og:description" content="前言       这篇文章需要一点hadoop框架的基础，你最好需要知道什么是hadoop，以及需要了解hadoop的文件系统hdfs。如果你不了解的话，我会尝试用简单的原理来解释，希望能对你有用，这期内容可能有些烧脑，可以多读几遍，我也有学习不足的地方，欢迎提问。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://yoursite.com/pic/050501.png">
+<meta property="article:published_time" content="2020-05-05T06:57:34.000Z">
+<meta property="article:modified_time" content="2020-05-05T07:18:26.549Z">
+<meta property="article:author" content="lishinho">
+<meta property="article:tag" content="大数据技术">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://yoursite.com/pic/050501.png"><meta name="keywords" content="lishinho, Lishinho Website"><meta name="description" content="大数据技术博客以及月刊～"><title>HDFS透明加密 从入门到放弃 | Lishinho Website</title><link ref="canonical" href="http://yoursite.com/2020/05/05/HDFS%E9%80%8F%E6%98%8E%E5%8A%A0%E5%AF%86-%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/"><link rel="dns-prefetch" href="https://cdn.jsdelivr.net"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@5.12.1/css/all.min.css" type="text/css"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gitalk@latest/dist/gitalk.min.css" type="text/css"><link rel="stylesheet" href="/css/index.css?v=2.0.0-rc.0"><script>var Stun = window.Stun || {};
+var CONFIG = {
+  root: '/',
+  algolia: undefined,
+  fontIcon: {"prompt":{"success":"fas fa-check-circle","info":"fas fa-arrow-circle-right","warning":"fas fa-exclamation-circle","error":"fas fa-times-circle"},"copyBtn":"fas fa-copy"},
+  sidebar: {"offsetTop":"20px","tocMaxDepth":6},
+  header: {"enable":true,"showOnPost":false,"scrollDownIcon":false},
+  postWidget: {"endText":true},
+  nightMode: {"enable":true},
+  back2top: {"enable":true},
+  codeblock: {"style":"default","highlight":"light","wordWrap":false},
+  reward: false,
+  fancybox: false,
+  zoomImage: {"gapAside":"20px"},
+  galleryWaterfall: undefined,
+  lazyload: false,
+  pjax: undefined,
+  externalLink: {"icon":{"enable":true,"name":"fas fa-external-link-alt"}},
+  shortcuts: undefined,
+  prompt: {"copyButton":"复制","copySuccess":"复制成功","copyError":"复制失败"},
+  sourcePath: {"js":"js","css":"css","images":"images"},
+};
+
+window.CONFIG = CONFIG;</script><meta name="generator" content="Hexo 4.2.0"><link rel="alternate" href="/atom.xml" title="Lishinho Website" type="application/atom+xml">
+</head><body><div class="container" id="container"><header class="header" id="header"><div class="header-inner header-inner--height header-inner--bgcolor"><nav class="header-nav header-nav--sticky"><div class="header-nav-inner"><div class="header-nav-menubtn"><i class="fas fa-bars"></i></div><div class="header-nav-menu"><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/"><span class="header-nav-menu-item__icon"><i class="fas fa-home"></i></span><span class="header-nav-menu-item__text">首页</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/archives/"><span class="header-nav-menu-item__icon"><i class="fas fa-folder-open"></i></span><span class="header-nav-menu-item__text">归档</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/categories/"><span class="header-nav-menu-item__icon"><i class="fas fa-layer-group"></i></span><span class="header-nav-menu-item__text">分类</span></a></div><div class="header-nav-menu-item"><a class="header-nav-menu-item__link" href="/tags/"><span class="header-nav-menu-item__icon"><i class="fas fa-tags"></i></span><span class="header-nav-menu-item__text">标签</span></a></div></div><div class="header-nav-mode"><div class="mode"><div class="mode-track"><span class="mode-track-moon"></span><span class="mode-track-sun"></span></div><div class="mode-thumb"></div></div></div></div></nav></div></header><main class="main" id="main"><div class="main-inner"><div class="content-wrap" id="content-wrap"><div class="content" id="content"><!-- Just used to judge whether it is an article page--><div id="is-post"></div><div class="post"><header class="post-header"><h1 class="post-title">HDFS透明加密 从入门到放弃</h1><div class="post-meta"><span class="post-meta-item post-meta-item--createtime"><span class="post-meta-item__icon"><i class="far fa-calendar-plus"></i></span><span class="post-meta-item__info">发表于</span><span class="post-meta-item__value">2020-05-05</span></span><span class="post-meta-item post-meta-item--updatetime"><span class="post-meta-item__icon"><i class="far fa-calendar-check"></i></span><span class="post-meta-item__info">更新于</span><span class="post-meta-item__value">2020-05-05</span></span><span class="post-meta-item post-meta-item--visitors"><span class="post-meta-item__icon"><i class="fas fa-eye"></i></span><span class="post-meta-item__info">阅读次数</span><span class="post-meta-item__value" id="busuanzi_value_page_pv"></span></span></div></header><div class="post-body">
+        <h2 id="前言"   >
+          <a href="#前言" class="heading-link"><i class="fas fa-link"></i></a>前言</h2>
+      <p>这篇文章需要一点hadoop框架的基础，你最好需要知道什么是hadoop，以及需要了解hadoop的文件系统hdfs。如果你不了解的话，我会尝试用简单的原理来解释，希望能对你有用，这期内容可能有些烧脑，可以多读几遍，我也有学习不足的地方，欢迎提问。</p>
+<a id="more"></a>
+
+
+        <h2 id="一，什么是HDFS"   >
+          <a href="#一，什么是HDFS" class="heading-link"><i class="fas fa-link"></i></a>一，什么是HDFS</h2>
+      <p>hdfs全称Hadoop分布式文件系统，在网上搜索你一般会得到来自apache hadoop官方文档的这样一段话：</p>
+<p>Hadoop分布式文件系统(HDFS)被设计成适合运行在通用硬件(commodity hardware)上的分布式文件系统。它和现有的分布式文件系统有很多共同点。但同时，它和其他的分布式文件系统的区别也是很明显的。HDFS是一个高度容错性的系统，适合部署在廉价的机器上。HDFS能提供高吞吐量的数据访问，非常适合大规模数据集上的应用。</p>
+<p>我在之前的大数据框架中有提到，hadoop这个项目是源自Google公司的MapReduce论文实现而成，利用分布式文件设计和mapreduce提高文件系统容错性，框架可以自动处理节点故障，所以适合处理大数据的数据读写访问。</p>
+
+        <h3 id="hadoop工程中的主要子项目："   >
+          <a href="#hadoop工程中的主要子项目：" class="heading-link"><i class="fas fa-link"></i></a>hadoop工程中的主要子项目：</h3>
+      <p><strong>hadoop-hdfs-project:</strong><br>分布式文件系统，其中包括hadoop-hdfs-httpfs , hadoop-hdfs-nfs提供http网关服务和传输和hadoop-hdfs。</p>
+<p><strong>hadoop-common:</strong><br>分离出hdfs和mapreduce的hadoop中的公共部分</p>
+<p><strong>hadoop-client:</strong><br>客户端接口</p>
+<p><strong>hadoop-MapReduce：</strong><br>提供MapReduce编程模型的实现，用于大规模数据处理。</p>
+<p><strong>hadoop-yarn:</strong><br>负责管理集群中的计算资源并将其用于调度用户的应用程序</p>
+
+        <h3 id="hdfs能做什么？"   >
+          <a href="#hdfs能做什么？" class="heading-link"><i class="fas fa-link"></i></a>hdfs能做什么？</h3>
+      <ol>
+<li>商用硬件</li>
+</ol>
+<p>商用硬件的特点是流量极大而系统可靠性要求极高，一旦哪个节点崩了就可能造成大量损失，所以维护系统可靠性十分重要，而要实现如此流量大又可靠的文件系统服务投入的资金就很可观了，所以hdfs的设计是让你分布式可以存储在各个节点上，这些节点还可以廉价，通过hdfs的可靠性服务来自动处理节点故障。</p>
+<ol start="2">
+<li>流式数据访问</li>
+</ol>
+<p>运行在HDFS上的应用和普通的应用不同，需要流式访问它们的数据集。HDFS的设计中更多的考虑到了数据批处理，而不是用户交互处理。比之数据访问的低延迟问题，更关键的在于数据访问的高吞吐量。POSIX标准设置的很多硬性约束对HDFS应用系统不是必需的。为了提高数据的吞吐量，hdfs在一些关键方面对POSIX的语义做了一些修改。</p>
+<ol start="3">
+<li>超大文件</li>
+</ol>
+<p>普通文件读写遇到超大文件就会很头疼，一旦遇到网络问题，序列化过程或者文件磁盘问题就会中途断掉，导致读写成功率很低，HDFS被调节以支持大文件存储。采用一次写入多次读取的方式并且能提供整体上高的数据传输带宽，在一个集群里扩展到数百个节点分布式存储数据文件。</p>
+<p>hdfs在数据传输层面上也做了很多工作供了将它们自己移动到数据附近的接口，将计算移动到数据附近，比之将数据移动到应用所在显然更好。不过相反需要低延迟，大量小文件和多用户写入的应用场景就不适合hdfs。</p>
+
+        <h2 id="二，什么是透明加密"   >
+          <a href="#二，什么是透明加密" class="heading-link"><i class="fas fa-link"></i></a>二，什么是透明加密</h2>
+      <p>然而本篇文章不是想讲文件系统，而是要将透明加密，下边进入正题。</p>
+
+        <h3 id="透明加密"   >
+          <a href="#透明加密" class="heading-link"><i class="fas fa-link"></i></a>透明加密</h3>
+      <p>透明加密技术是近年来针对企业文件保密需求应运而生的一种文件加密技术。它是指对使用者来说是无感知的。当使用者在打开或编辑指定文件时，系统将自动对未加密的文件进行加密，对已加密的文件自动解密。文件在硬盘上是密文，在内存中是明文。一旦离开使用环境，由于应用程序无法得到自动解密的服务而无法打开，从而起来保护文件内容的效果。</p>
+<p>所以只要有数据的存储就可以使用透明加密技术来保护用户数据的安全。比较典型的一个场景是聊天通讯软件，telegram是一个开源透明加密的通信软件，我们在telegram上聊天，应用方并不知道我们的聊天内容，因为系统会将文件进行端对端的加密解密，意思就是你发的消息在客户端发送的时候已经被加密了，到达另一方的客户端再解密，整个传输过程即使有人窃听了消息，得到的也是加密过的密文，听起来是不是很棒？不过相反如果有人谈论的是违法内容，同样也难以进行窃听，可能导致的就是N号房事件，所以这也就是技术的两面性吧。</p>
+<p>所以具体应用场景每个厂商可能实现透明加密的方式会不同，你的聊天记录是否泄露取决于企业应用实现的机制，不过要做区别的是这和你的搜索记录是两码事，你的聊天记录不一定被征用，但你的搜索记录是可以被记录并用于大数据分析的，这个扯远了有时间再说。</p>
+
+        <h3 id="透明加密的分类"   >
+          <a href="#透明加密的分类" class="heading-link"><i class="fas fa-link"></i></a>透明加密的分类</h3>
+      <p>应用程序级加密：这是最安全和最灵活的方法。应用程序对加密的内容有最终的控制，并且可以精确地反映用户的要求。但是，编写应用程序来做到这一点很困难。而且对于不支持加密的现有应用程序的客户来说，可能就要更新换客户端了。</p>
+<p><strong>数据库级加密：</strong><br>类似于应用程序级加密的属性。大多数数据库供应商提供某种形式的加密。 但是，可能会有性能问题。一个例子是索引不能被加密。</p>
+<p><strong>文件系统级加密：</strong><br>该选项提供了高性能，应用程序透明性，并且通常易于部署。但是，它无法模拟某些应用程序级别的策略。例如，多租户应用程序可能希望基于最终用户进行加密。数据库可能需要对存储在单个文件中的每个列进行不同的加密设置。</p>
+<p><strong>磁盘级加密：</strong><br>易于部署和高性能，但也相当不灵活。只有真正防止物理盗窃的作用。</p>
+
+        <h2 id="三，用户如何使用hdfs透明加密功能"   >
+          <a href="#三，用户如何使用hdfs透明加密功能" class="heading-link"><i class="fas fa-link"></i></a>三，用户如何使用hdfs透明加密功能</h2>
+      <p>除了hdfs和client客户端之外，还有一个重要的出场角色是KMS。</p>
+<p>KMS(key management server)密钥管理服务器，是一个在hadoop-common工程里，独立于hdfs的组件，它相当于一个管理密钥的服务器有自己的dao层和后端数据库，用来作为发放透明加密密钥的第三方。</p>
+<p>透明加密步骤：</p>
+<ol>
+<li>KMS生成可使用的密钥</li>
+</ol>
+<p>KMS的密钥由特定权限的用户管理，权限也是独立于hdfs的，特权用户登陆后通过</p>
+<p>hadoop key create [keyName]</p>
+<p>来创建密钥，还可以通过-cipher 参数指定密钥加密材料，-size参数指定位数，原理是通过jce框架的随机数生成器通过默认的加密算法声称我们需要的密钥，默认是AES/CTR方式/128bit</p>
+<ol start="2">
+<li>初始化加密区</li>
+</ol>
+<p>这一步需要hdfs的特殊用户登陆操作，特殊用户首先创建要加密的加密区</p>
+<p>hadoop fs -mkdir /data-encrypt</p>
+<p>把这一目录的权限赋给普通用户hive</p>
+<p>hadoop fs -chown hive:hive /data-encrypt</p>
+<p>然后使用生成的密钥创建加密区</p>
+<p>hdfs crypto -createZone -keyName [keyName] -path /data-encrypt</p>
+<ol start="3">
+<li>用户使用hdfs时，存到加密区的数据都会以数据块形式存储到hdfs节点的meta文件中，打开后是一堆乱码，而客户端用指令hadoop fs -cat还是get指令得到的都是明文，这就是端对端加密。我们可以通过以下方式得到加密文件的数据块。</li>
+</ol>
+<p>hdfs fsck /data-encrypt -files -blocks -locations 分别选择加密/原文件查找存储的数据块</p>
+<p>记下数据块编号，进入hdfs存储节点</p>
+<p>cd /hadoop/data<br>find ./ -name blk_1073741827_1003*</p>
+<p>就会找到加密后的数据块文件。</p>
+
+        <h3 id="过程详解"   >
+          <a href="#过程详解" class="heading-link"><i class="fas fa-link"></i></a>过程详解</h3>
+      <p>在这个过程中，hdfs上的每个加密区都会与每个hdfs特殊用户绑定的加密区密钥相关联（EK），这个Key在创建加密区的时候用hdfs crypto指令同时被指定。而这个由KMS颁发的E key并不会被文件加密直接使用，每个加密区中的文件会有其唯一的Data Encryption Key数据加密Key，简称就是DEK。同样DEK不会被HDFS直接处理，取而代之的是，HDFS只处理经过加密的DEK，就是Encrypted Data Encryption Key，缩写就是EDEK。</p>
+<p>客户端询问KMS服务去解密EDEK，然后利用解密后得到的DEK去读/写数据。KMS利用存储的EZ Key来解密EDEK得到DEK。<br>在客户端向KMS服务请求时候，会有相关权限验证，不符合要求的客户端将不会得到解密好的DEK。而且KMS的权限验证是独立于HDFS的，是自身的一套权限验证。这样完成hdfs的一整套透明加密。</p>
+<p>EK-&gt;KMS管理的加密密钥</p>
+<p>EDEK-&gt;hdfs能使用的作为文件元数据的密钥</p>
+<p>DEK-&gt;数据加密使用的密钥</p>
+
+        <h2 id="四，hdfs如何实现透明加密"   >
+          <a href="#四，hdfs如何实现透明加密" class="heading-link"><i class="fas fa-link"></i></a>四，hdfs如何实现透明加密</h2>
+      <p>如下图：</p>
+<p><img src="/pic/050501.png" alt="HDFS-crypto"> </p>
+<p><font size=2><center>fig.1 HDFS加密过程</center></font> </p>
+<p>写操作是：1-&gt;2-&gt;3a-&gt;4a</p>
+<p>读操作是：1-&gt;2-&gt;3b-&gt;4b-&gt;5b</p>
+<p>在加密区域中写新文件时，NameNode会要求KMS生成使用加密区域密钥加密的新EDEK。然后将EDEK作为文件元数据的一部分永久保存在NameNode上。</p>
+<p>在读取加密区域内的文件时，NameNode向客户端提供文件的EDEK和用于加密EDEK的加密区密钥版本。客户端然后要求KMS解密EDEK，包括检查客户端是否有权访问加密区密钥版本。假设成功，客户端使用DEK解密文件的内容</p>
+<p>访问加密的文件数据和元数据是由正常的HDFS文件系统权限控制的。这意味着如果HDFS受到攻击（例如，通过未经授权访问HDFS超级用户帐户），恶意用户只能访问密文和加密密钥。但是，由于对加密区域密钥的访问由KMS和密钥存储区上单独的一组权限控制，因此这不会构成安全威胁。</p>
+<p>下边是官文原话，还算易读：</p>
+<p>KMS实现了附加功能，可以创建和解密加密密钥（EEK）。EEK的创建和解密完全在KMS上进行。重要的是，请求创建或解密EEK的客户永远不会处理EEK的加密密钥。要创建一个新的EEK，KMS会生成一个新的随机密钥，并使用指定的密钥对其进行加密，然后将EEK返回给客户端。为了解密EEK，KMS检查用户有权访问加密密钥，使用它来解密EEK，并返回解密的加密密钥。</p>
+<p>其中看代码EK和DEK指的是同一个密钥，只不过因为讲解的原因把他们分成KMS里和KMS外比较好理解，密钥滚动版本的支持就可以让密钥生效，使用时本身也不需要强行区分EK和DEK的功能。</p>
+<p>总结一下！就是由于hdfs一次写多次读的特性，加入kms机制多一层权限管理，使得hdfs完成端到端的透明加密，就是说hdfs只存储加密文件和对应的EDEK，客户端通过和KMS合作加解密文件，保护了用户的数据安全。</p>
+
+        <h3 id="参考文献："   >
+          <a href="#参考文献：" class="heading-link"><i class="fas fa-link"></i></a>参考文献：</h3>
+      <ol>
+<li><p>官网： <span class="exturl"><a class="exturl__link"   href="http://www.searchdoc.cn/hadoop/hadoop.apache.org/docs/r2.9.0/hadoop-project-dist/hadoop-hdfs/TransparentEncryption.com.coder114.cn.html"  target="_blank" rel="noopener">http://www.searchdoc.cn/hadoop/hadoop.apache.org/docs/r2.9.0/hadoop-project-dist/hadoop-hdfs/TransparentEncryption.com.coder114.cn.html</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span></p>
+</li>
+<li><p>AWS hadoop： <span class="exturl"><a class="exturl__link"   href="https://docs.aws.amazon.com/zh_cn/emr/latest/ReleaseGuide/emr-encryption-tdehdfs.html"  target="_blank" rel="noopener">https://docs.aws.amazon.com/zh_cn/emr/latest/ReleaseGuide/emr-encryption-tdehdfs.html</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span></p>
+</li>
+<li><p>AES加密：<span class="exturl"><a class="exturl__link"   href="https://blog.csdn.net/qq_28205153/article/details/55798628"  target="_blank" rel="noopener">https://blog.csdn.net/qq_28205153/article/details/55798628</a><span class="exturl__icon"><i class="fas fa-external-link-alt"></i></span></span></p>
+</li>
+</ol>
+</div><footer class="post-footer"><div class="post-ending ending"><div class="ending__text">------ 本文结束，感谢您的阅读 ------</div></div><div class="post-copyright copyright"><div class="copyright-author"><span class="copyright-author__name">本文作者: </span><span class="copyright-author__value"><a href="http://yoursite.com">lishinho</a></span></div><div class="copyright-link"><span class="copyright-link__name">本文链接: </span><span class="copyright-link__value"><a href="http://yoursite.com/2020/05/05/HDFS%E9%80%8F%E6%98%8E%E5%8A%A0%E5%AF%86-%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/">http://yoursite.com/2020/05/05/HDFS%E9%80%8F%E6%98%8E%E5%8A%A0%E5%AF%86-%E4%BB%8E%E5%85%A5%E9%97%A8%E5%88%B0%E6%94%BE%E5%BC%83/</a></span></div><div class="copyright-notice"><span class="copyright-notice__name">版权声明: </span><span class="copyright-notice__value">本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="external nofollow" target="_blank">BY-NC-SA</a> 许可协议。转载请注明出处！</span></div></div><div class="post-tags"><span class="post-tags-item"><span class="post-tags-item__icon"><i class="fas fa-tag"></i></span><a class="post-tags-item__link" href="http://yoursite.com/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE%E6%8A%80%E6%9C%AF/">大数据技术</a></span></div><nav class="post-paginator paginator"><div class="paginator-next"><a class="paginator-next__link" href="/2020/05/03/HDFS%E6%96%87%E4%BB%B6%E8%AF%BB%E5%86%99%E5%89%96%E6%9E%90/"><span class="paginator-prev__text">HDFS文件读写剖析</span><span class="paginator-next__icon"><i class="fas fa-angle-right"></i></span></a></div></nav></footer></div></div><div class="comments" id="comments"><div id="gitalk-container"></div></div></div><div class="sidebar-wrap" id="sidebar-wrap"><aside class="sidebar" id="sidebar"><div class="sidebar-nav"><span class="sidebar-nav-toc current">文章目录</span><span class="sidebar-nav-ov">站点概览</span></div><section class="sidebar-toc"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#前言"><span class="toc-number">1.</span> <span class="toc-text">
+          前言</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一，什么是HDFS"><span class="toc-number">2.</span> <span class="toc-text">
+          一，什么是HDFS</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#hadoop工程中的主要子项目："><span class="toc-number">2.1.</span> <span class="toc-text">
+          hadoop工程中的主要子项目：</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#hdfs能做什么？"><span class="toc-number">2.2.</span> <span class="toc-text">
+          hdfs能做什么？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二，什么是透明加密"><span class="toc-number">3.</span> <span class="toc-text">
+          二，什么是透明加密</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#透明加密"><span class="toc-number">3.1.</span> <span class="toc-text">
+          透明加密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#透明加密的分类"><span class="toc-number">3.2.</span> <span class="toc-text">
+          透明加密的分类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三，用户如何使用hdfs透明加密功能"><span class="toc-number">4.</span> <span class="toc-text">
+          三，用户如何使用hdfs透明加密功能</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#过程详解"><span class="toc-number">4.1.</span> <span class="toc-text">
+          过程详解</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四，hdfs如何实现透明加密"><span class="toc-number">5.</span> <span class="toc-text">
+          四，hdfs如何实现透明加密</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#参考文献："><span class="toc-number">5.1.</span> <span class="toc-text">
+          参考文献：</span></a></li></ol></li></ol></section><!-- ov = overview--><section class="sidebar-ov hide"><div class="sidebar-ov-author"><div class="sidebar-ov-author__avatar"><img class="sidebar-ov-author__avatar_img" src="/assets/icon.png" alt="avatar"></div><p class="sidebar-ov-author__text">欢迎来到我的博客！</p></div><div class="sidebar-ov-social"><a class="sidebar-ov-social-item" href="https://github.com/lishinho" target="_blank" rel="noopener" data-popover="Github" data-popover-pos="up"><span class="sidebar-ov-social-item__icon"><i class="fab fa-github"></i></span></a><a class="sidebar-ov-social-item" href="lzb_include" target="_blank" rel="noopener" data-popover="微信" data-popover-pos="up"><span class="sidebar-ov-social-item__icon"><i class="fab fa-weixin"></i></span></a><a class="sidebar-ov-social-item" href="https://blog.csdn.net/wannuoge4766" target="_blank" rel="noopener" data-popover="CSDN" data-popover-pos="up"><span class="sidebar-ov-social-item__icon">C</span></a><a class="sidebar-ov-social-item" href="534240720" target="_blank" rel="noopener" data-popover="QQ" data-popover-pos="up"><span class="sidebar-ov-social-item__icon"><i class="fab fa-qq"></i></span></a></div><div class="sidebar-ov-state"><a class="sidebar-ov-state-item sidebar-ov-state-item--posts" href="/archives/"><div class="sidebar-ov-state-item__count">4</div><div class="sidebar-ov-state-item__name">归档</div></a><a class="sidebar-ov-state-item sidebar-ov-state-item--categories" href="/categories/"><div class="sidebar-ov-state-item__count">2</div><div class="sidebar-ov-state-item__name">分类</div></a><a class="sidebar-ov-state-item sidebar-ov-state-item--tags" href="/tags/"><div class="sidebar-ov-state-item__count">2</div><div class="sidebar-ov-state-item__name">标签</div></a></div><div class="sidebar-ov-cc"><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" target="_blank" rel="noopener" data-popover="知识共享许可协议" data-popover-pos="up"><img src="/images/cc-by-nc-sa.svg"></a></div></section><div class="sidebar-reading"><div class="sidebar-reading-info"><span class="sidebar-reading-info__text">读完了 </span><span class="sidebar-reading-info__num">0</span></div><div class="sidebar-reading-line"></div></div></aside></div><div class="clearfix"></div></div></main><footer class="footer" id="footer"><div class="footer-inner"><div><span>Copyright © 2020</span><span class="footer__icon"><i class="fas fa-heart"></i></span><span>lishinho</span></div><div><span>由 <a href="http://hexo.io/" title="Hexo" target="_blank" rel="noopener">Hexo</a> 强力驱动</span><span> v4.2.0</span></div><div class="busuanzi"><span class="busuanzi-siteuv"><span class="busuanzi-siteuv__icon"><i class="fas fa-user"></i></span><span class="busuanzi-siteuv__info">访问人数</span><span class="busuanzi-siteuv__value" id="busuanzi_value_site_uv"></span></span><span class="busuanzi-sitepv"><span class="busuanzi-siteuv__icon"><i class="fas fa-eye"></i></span><span class="busuanzi-siteuv__info">浏览总量</span><span class="busuanzi-siteuv__value" id="busuanzi_value_site_pv"></span></span></div></div></footer><div class="loading-bar" id="loading-bar"><div class="loading-bar__progress"></div></div><div class="back2top" id="back2top"><span class="back2top__icon"><i class="fas fa-rocket"></i></span></div></div><script src="https://cdn.jsdelivr.net/npm/jquery@v3.4.1/dist/jquery.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@1.5.2/velocity.min.js"></script><script src="https://cdn.jsdelivr.net/npm/velocity-animate@1.5.2/velocity.ui.min.js"></script><script src="https://cdn.jsdelivr.net/gh/sukkaw/busuanzi@latest/bsz.pure.mini.js" async></script><script src="https://cdn.jsdelivr.net/npm/gitalk@latest/dist/gitalk.min.js"></script><script src="https://cdn.jsdelivr.net/npm/js-md5@latest/src/md5.min.js"></script><script>function loadGitalk () {
+  if (!document.getElementById('gitalk-container')) {
+    return;
+  }
+
+  var gitalk = new Gitalk({
+    id: md5(window.location.pathname.slice(1)),
+    clientID: '',
+    clientSecret: '',
+    repo: '',
+    owner: 'lishinho',
+    admin: [''],
+    distractionFreeMode: 'false',
+    language: 'zh-CN'
+  });
+  gitalk.render('gitalk-container');
+}
+
+if (false) {
+  loadGitalk();
+} else {
+  window.addEventListener('DOMContentLoaded', loadGitalk, false);
+}</script><script src="/js/utils.js?v=2.0.0-rc.0"></script><script src="/js/stun-boot.js?v=2.0.0-rc.0"></script><script src="/js/scroll.js?v=2.0.0-rc.0"></script><script src="/js/header.js?v=2.0.0-rc.0"></script><script src="/js/sidebar.js?v=2.0.0-rc.0"></script></body></html>
